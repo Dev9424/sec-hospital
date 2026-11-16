@@ -16,7 +16,7 @@ function AppointmentBooking({ user }) {
         fetchMyAppointments();
     }, []);
 
-    const fetchDoctors = async() => {
+    const fetchDoctors = async () => {
         try {
             const res = await axios.get('/appointments/available-doctors');
             setDoctors(res.data);
@@ -25,7 +25,7 @@ function AppointmentBooking({ user }) {
         }
     };
 
-    const fetchMyAppointments = async() => {
+    const fetchMyAppointments = async () => {
         try {
             const res = await axios.get('/appointments/my-appointments');
             setMyAppointments(res.data);
@@ -34,7 +34,7 @@ function AppointmentBooking({ user }) {
         }
     };
 
-    const bookAppointment = async(e) => {
+    const bookAppointment = async (e) => {
         e.preventDefault();
         setError('');
         setSuccess('');
@@ -44,16 +44,12 @@ function AppointmentBooking({ user }) {
             return;
         }
 
-        // Check if date is in the past
-        const selectedDateTime = new Date(appointmentDate);
-        const now = new Date();
-        if (selectedDateTime < now) {
-            setError('Cannot book appointment in the past');
+        if (new Date(appointmentDate) < new Date()) {
+            setError('Cannot book an appointment in the past');
             return;
         }
 
         setLoading(true);
-
         try {
             const res = await axios.post('/appointments/book', {
                 doctor_id: selectedDoctor,
@@ -62,7 +58,7 @@ function AppointmentBooking({ user }) {
             });
 
             if (res.data.success) {
-                setSuccess('Appointment booked successfully!');
+                setSuccess('Appointment booked successfully! Awaiting doctor approval.');
                 setSelectedDoctor('');
                 setAppointmentDate('');
                 setReason('');
@@ -75,9 +71,8 @@ function AppointmentBooking({ user }) {
         }
     };
 
-    const cancelAppointment = async(id) => {
+    const cancelAppointment = async (id) => {
         if (!window.confirm('Are you sure you want to cancel this appointment?')) return;
-
         try {
             await axios.delete(`/appointments/${id}/cancel`);
             setSuccess('Appointment cancelled');
@@ -87,140 +82,157 @@ function AppointmentBooking({ user }) {
         }
     };
 
-    const getStatusBadge = (status) => {
-        const badges = {
-            scheduled: { bg: '#fff3cd', color: '#856404', text: 'Scheduled' },
-            completed: { bg: '#d4edda', color: '#155724', text: 'Completed' },
-            cancelled: { bg: '#f8d7da', color: '#721c24', text: 'Cancelled' }
-        };
-        return badges[status] || badges.scheduled;
+    const approvalConfig = {
+        pending:  { bg: '#fff7ed', color: '#c2410c', border: '#fed7aa', text: '⏳ Pending Approval' },
+        approved: { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0', text: '✓ Approved' },
+        rejected: { bg: '#fff1f2', color: '#be123c', border: '#fecdd3', text: '✗ Rejected' },
     };
 
-    const getApprovalBadge = (status) => {
-        const badges = {
-            pending: { bg: '#fff3e0', color: '#f57c00', text: '⏳ Pending Approval' },
-            approved: { bg: '#e8f5e9', color: '#2e7d32', text: '✓ Approved' },
-            rejected: { bg: '#ffebee', color: '#c62828', text: '✗ Rejected' }
-        };
-        return badges[status] || badges.pending;
+    const statusConfig = {
+        scheduled:  { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', text: 'Scheduled' },
+        completed:  { bg: '#f0fdf4', color: '#166534', border: '#bbf7d0', text: 'Completed' },
+        cancelled:  { bg: '#f8fafc', color: '#64748b', border: '#e2e8f0', text: 'Cancelled' },
     };
 
     return (
-        <div className="appointment-booking">
-            <h2>Book an Appointment</h2>
-
-            {error && <div className="error-message">{error}</div>}
-            {success && <div className="success-message">{success}</div>}
-
-            <form onSubmit={bookAppointment} className="appointment-form">
-                <div className="form-group">
-                    <label>Select Doctor:</label>
-                    <select
-                        value={selectedDoctor}
-                        onChange={(e) => setSelectedDoctor(e.target.value)}
-                        required
-                    >
-                        <option value="">Choose a doctor...</option>
-                        {doctors.map(doctor => (
-                            <option key={doctor.id} value={doctor.id}>
-                                Dr. {doctor.username}
-                            </option>
-                        ))}
-                    </select>
+        <div className="appt-booking">
+            {/* ── Book Form ── */}
+            <div className="appt-form-card">
+                <div className="appt-form-card__header">
+                    <div className="appt-form-card__icon">📅</div>
+                    <div>
+                        <div className="appt-form-card__title">Book an Appointment</div>
+                        <div className="appt-form-card__sub">Schedule a visit with one of our doctors</div>
+                    </div>
                 </div>
 
-                <div className="form-group">
-                    <label>Appointment Date & Time:</label>
-                    <input
-                        type="datetime-local"
-                        value={appointmentDate}
-                        onChange={(e) => setAppointmentDate(e.target.value)}
-                        min={new Date().toISOString().slice(0, 16)}
-                        required
-                    />
-                </div>
+                {error   && <div className="appt-msg appt-msg--error">⚠️ {error}</div>}
+                {success && <div className="appt-msg appt-msg--success">✓ {success}</div>}
 
-                <div className="form-group">
-                    <label>Reason for Visit (Optional):</label>
-                    <textarea
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        placeholder="Briefly describe your symptoms or reason for visit..."
-                        rows="3"
-                    />
-                </div>
+                <form onSubmit={bookAppointment} className="appt-form">
+                    <div className="appt-form__row">
+                        <div className="appt-form__group">
+                            <label className="appt-form__label">Select Doctor</label>
+                            <select
+                                value={selectedDoctor}
+                                onChange={(e) => setSelectedDoctor(e.target.value)}
+                                required
+                                className="appt-form__input"
+                            >
+                                <option value="">Choose a doctor…</option>
+                                {doctors.map(doctor => (
+                                    <option key={doctor.id} value={doctor.id}>
+                                        Dr. {doctor.username}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="appt-form__group">
+                            <label className="appt-form__label">Date &amp; Time</label>
+                            <input
+                                type="datetime-local"
+                                value={appointmentDate}
+                                onChange={(e) => setAppointmentDate(e.target.value)}
+                                min={new Date().toISOString().slice(0, 16)}
+                                required
+                                className="appt-form__input"
+                            />
+                        </div>
+                    </div>
+                    <div className="appt-form__group">
+                        <label className="appt-form__label">Reason for Visit <span className="appt-optional">(Optional)</span></label>
+                        <textarea
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            placeholder="Briefly describe your symptoms or reason for visit…"
+                            rows="3"
+                            className="appt-form__input"
+                        />
+                    </div>
+                    <button type="submit" disabled={loading} className="appt-submit-btn">
+                        {loading ? '⏳ Booking…' : '📅 Book Appointment'}
+                    </button>
+                </form>
+            </div>
 
-                <button type="submit" disabled={loading} className="book-btn">
-                    {loading ? 'Booking...' : 'Book Appointment'}
-                </button>
-            </form>
-
-            <div className="my-appointments">
-                <h3>My Appointments</h3>
+            {/* ── My Appointments ── */}
+            <div className="appt-list-section">
+                <h3 className="appt-list-title">My Appointments</h3>
                 {myAppointments.length === 0 ? (
-                    <p>No appointments booked yet.</p>
+                    <div className="appt-empty">
+                        <div className="appt-empty__icon">📭</div>
+                        <p>No appointments booked yet. Schedule your first visit above!</p>
+                    </div>
                 ) : (
-                    <div className="appointments-list">
+                    <div className="appt-cards">
                         {myAppointments.map(appt => {
-                            const badge = getStatusBadge(appt.status);
-                            const approvalBadge = getApprovalBadge(appt.approval_status || 'pending');
-                            
+                            const st  = statusConfig[appt.status]   || statusConfig.scheduled;
+                            const ap  = approvalConfig[appt.approval_status || 'pending'] || approvalConfig.pending;
+
                             return (
-                                <div key={appt.id} className="appointment-card">
-                                    <div className="card-header">
-                                        <h4>Dr. {appt.doctor_name}</h4>
-                                        <div className="badges-container">
-                                            <span 
-                                                className="status-badge"
-                                                style={{ 
-                                                    background: badge.bg, 
-                                                    color: badge.color 
-                                                }}
+                                <div key={appt.id} className="appt-card">
+                                    <div className="appt-card__header">
+                                        <div className="appt-card__doctor">
+                                            <div className="appt-card__doctor-avatar">
+                                                {appt.doctor_name ? appt.doctor_name.slice(0, 2).toUpperCase() : 'DR'}
+                                            </div>
+                                            <div>
+                                                <div className="appt-card__doctor-name">Dr. {appt.doctor_name}</div>
+                                                <div className="appt-card__date">
+                                                    📅 {new Date(appt.appointment_date).toLocaleString()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="appt-card__badges">
+                                            <span
+                                                className="appt-badge"
+                                                style={{ background: st.bg, color: st.color, borderColor: st.border }}
                                             >
-                                                {badge.text}
+                                                {st.text}
                                             </span>
-                                            <span 
-                                                className="approval-badge"
-                                                style={{ 
-                                                    background: approvalBadge.bg, 
-                                                    color: approvalBadge.color 
-                                                }}
+                                            <span
+                                                className="appt-badge"
+                                                style={{ background: ap.bg, color: ap.color, borderColor: ap.border }}
                                             >
-                                                {approvalBadge.text}
+                                                {ap.text}
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="card-body">
-                                        <p><strong>Date:</strong> {new Date(appt.appointment_date).toLocaleString()}</p>
-                                        {appt.reason && <p><strong>Reason:</strong> {appt.reason}</p>}
-                                        <p><strong>Booked on:</strong> {new Date(appt.created_at).toLocaleString()}</p>
-                                        
-                                        {appt.notes && (
-                                            <p className="doctor-notes">
-                                                <strong>Doctor's Notes:</strong> {appt.notes}
+                                    <div className="appt-card__body">
+                                        {appt.reason && (
+                                            <p className="appt-card__row">
+                                                <span className="appt-card__key">Reason</span>
+                                                <span>{appt.reason}</span>
                                             </p>
                                         )}
-                                        
-                                        {appt.approval_status === 'rejected' && (
-                                            <button 
-                                                onClick={() => {
-                                                    // Could add reschedule functionality here
-                                                    alert('This appointment was rejected. Please book a new one.');
-                                                }}
-                                                className="reschedule-btn"
-                                            >
-                                                🔄 Book New Appointment
-                                            </button>
+                                        <p className="appt-card__row">
+                                            <span className="appt-card__key">Booked on</span>
+                                            <span>{new Date(appt.created_at).toLocaleString()}</span>
+                                        </p>
+                                        {appt.notes && (
+                                            <div className="appt-card__notes">
+                                                <span className="appt-card__key">Doctor's Notes</span>
+                                                <p>{appt.notes}</p>
+                                            </div>
                                         )}
-                                        
-                                        {appt.status === 'scheduled' && appt.approval_status !== 'rejected' && (
-                                            <button 
-                                                onClick={() => cancelAppointment(appt.id)}
-                                                className="cancel-btn"
-                                            >
-                                                Cancel Appointment
-                                            </button>
-                                        )}
+                                        <div className="appt-card__actions">
+                                            {appt.approval_status === 'rejected' && (
+                                                <button
+                                                    className="appt-rebook-btn"
+                                                    onClick={() => alert('This appointment was rejected. Please book a new one.')}
+                                                >
+                                                    🔄 Book New Appointment
+                                                </button>
+                                            )}
+                                            {appt.status === 'scheduled' && appt.approval_status !== 'rejected' && (
+                                                <button
+                                                    className="appt-cancel-btn"
+                                                    onClick={() => cancelAppointment(appt.id)}
+                                                >
+                                                    ✕ Cancel
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             );

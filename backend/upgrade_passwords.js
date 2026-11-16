@@ -6,7 +6,7 @@ const argon2 = require('argon2');
         const db = await mysql.createConnection({
             host: 'localhost',
             user: 'root',
-            password: '[password]',
+            password: 'clearnda2025#@',
             database: 'hospital'
         });
         const [users] = await db.query('SELECT * FROM users');

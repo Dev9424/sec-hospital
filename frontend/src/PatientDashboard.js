@@ -25,22 +25,18 @@ function PatientDashboard({ user, onLogout }) {
         fetchAllData();
     }, []);
 
-    const fetchAllData = async() => {
+    const fetchAllData = async () => {
         setLoading(true);
         try {
-            // Fetch dashboard stats
             const dashRes = await axios.get('/patient/dashboard');
             setDashboardStats(dashRes.data);
 
-            // Fetch medical history
             const historyRes = await axios.get('/patient/medical-history');
             setMedicalHistory(historyRes.data);
 
-            // Fetch reports
             const reportsRes = await axios.get('/patient/reports');
             setReports(reportsRes.data);
 
-            // Fetch profile
             try {
                 const profileRes = await axios.get('/patient/profile');
                 setProfile(profileRes.data);
@@ -63,13 +59,10 @@ function PatientDashboard({ user, onLogout }) {
     };
 
     const handleProfileChange = (e) => {
-        setProfileData({
-            ...profileData,
-            [e.target.name]: e.target.value
-        });
+        setProfileData({ ...profileData, [e.target.name]: e.target.value });
     };
 
-    const saveProfile = async(e) => {
+    const saveProfile = async (e) => {
         e.preventDefault();
         try {
             await axios.put('/patient/profile', profileData);
@@ -81,45 +74,73 @@ function PatientDashboard({ user, onLogout }) {
         }
     };
 
+    /* ── Tab: Dashboard ── */
     const renderDashboard = () => {
-        if (!dashboardStats) return <p>Loading...</p>;
+        if (!dashboardStats) return <p className="pd-loading">Loading…</p>;
 
         return (
-            <div className="patient-dashboard">
-                <h2>Health Summary</h2>
-                
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <h3>Total Visits</h3>
-                        <p className="stat-number">{dashboardStats.totalVisits}</p>
+            <div className="pd-dashboard">
+                <div className="pd-stats-row">
+                    <div className="pd-stat-card pd-stat-card--blue">
+                        <div className="pd-stat-card__icon">🏥</div>
+                        <div>
+                            <div className="pd-stat-card__val">{dashboardStats.totalVisits}</div>
+                            <div className="pd-stat-card__label">Total Visits</div>
+                        </div>
                     </div>
-                    <div className="stat-card">
-                        <h3>Ongoing Treatments</h3>
-                        <p className="stat-number ongoing">{dashboardStats.ongoingTreatments}</p>
+                    <div className="pd-stat-card pd-stat-card--amber">
+                        <div className="pd-stat-card__icon">💊</div>
+                        <div>
+                            <div className="pd-stat-card__val">{dashboardStats.ongoingTreatments}</div>
+                            <div className="pd-stat-card__label">Ongoing Treatments</div>
+                        </div>
+                    </div>
+                    <div className="pd-stat-card pd-stat-card--green">
+                        <div className="pd-stat-card__icon">📋</div>
+                        <div>
+                            <div className="pd-stat-card__val">{medicalHistory.length}</div>
+                            <div className="pd-stat-card__label">Medical Records</div>
+                        </div>
+                    </div>
+                    <div className="pd-stat-card pd-stat-card--rose">
+                        <div className="pd-stat-card__icon">📄</div>
+                        <div>
+                            <div className="pd-stat-card__val">{reports.length}</div>
+                            <div className="pd-stat-card__label">Reports</div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="recent-section">
-                    <h3>Recent Visits</h3>
+                {/* Recent Visits */}
+                <div className="pd-section-card">
+                    <div className="pd-section-card__header">
+                        <span className="pd-section-card__title">🕐 Recent Visits</span>
+                    </div>
                     {dashboardStats.recentVisits.length === 0 ? (
-                        <p>No visits yet.</p>
+                        <p className="pd-empty">No visits yet.</p>
                     ) : (
-                        <div className="visits-timeline">
-                            {dashboardStats.recentVisits.map((visit, index) => (
-                                <div key={visit.id} className={`timeline-item ${visit.progress}`}>
-                                    <div className="timeline-marker"></div>
-                                    <div className="timeline-content">
-                                        <div className="visit-header">
-                                            <h4>{visit.diagnosis}</h4>
-                                            <span className={`status-badge ${visit.progress}`}>
-                                                {visit.progress}
+                        <div className="pd-timeline">
+                            {dashboardStats.recentVisits.map((visit) => (
+                                <div key={visit.id} className={`pd-timeline-item pd-timeline-item--${visit.progress}`}>
+                                    <div className="pd-timeline-dot"></div>
+                                    <div className="pd-timeline-content">
+                                        <div className="pd-timeline-top">
+                                            <span className="pd-timeline-diagnosis">{visit.diagnosis}</span>
+                                            <span className={`pd-progress-badge pd-progress-badge--${visit.progress}`}>
+                                                {visit.progress === 'completed' ? '✓ Completed' : '⟳ Ongoing'}
                                             </span>
                                         </div>
-                                        <p><strong>Date:</strong> {new Date(visit.visit_date).toLocaleDateString()}</p>
-                                        <p><strong>Doctor:</strong> {visit.doctor_name}</p>
-                                        <p><strong>Treatment:</strong> {visit.treatment}</p>
+                                        <div className="pd-timeline-meta">
+                                            <span>📅 {new Date(visit.visit_date).toLocaleDateString()}</span>
+                                            <span>👨‍⚕️ {visit.doctor_name}</span>
+                                        </div>
+                                        <p className="pd-timeline-treatment">
+                                            <strong>Treatment:</strong> {visit.treatment}
+                                        </p>
                                         {visit.prescription && (
-                                            <p><strong>Prescription:</strong> {visit.prescription}</p>
+                                            <p className="pd-timeline-prescription">
+                                                💊 {visit.prescription}
+                                            </p>
                                         )}
                                     </div>
                                 </div>
@@ -128,220 +149,255 @@ function PatientDashboard({ user, onLogout }) {
                     )}
                 </div>
 
+                {/* Latest Prescription */}
                 {dashboardStats.latestPrescription && (
-                    <div className="latest-prescription">
-                        <h3>Latest Prescription</h3>
-                        <p><strong>Date:</strong> {new Date(dashboardStats.latestPrescription.visit_date).toLocaleDateString()}</p>
-                        <p><strong>Prescription:</strong> {dashboardStats.latestPrescription.prescription}</p>
+                    <div className="pd-prescription-card">
+                        <div className="pd-prescription-card__icon">💊</div>
+                        <div>
+                            <div className="pd-prescription-card__label">Latest Prescription</div>
+                            <div className="pd-prescription-card__date">
+                                {new Date(dashboardStats.latestPrescription.visit_date).toLocaleDateString()}
+                            </div>
+                            <div className="pd-prescription-card__text">
+                                {dashboardStats.latestPrescription.prescription}
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
         );
     };
 
-    const renderMedicalHistory = () => {
-        return (
-            <div className="medical-history">
-                <h2>Complete Medical History</h2>
-                {medicalHistory.length === 0 ? (
-                    <p>No medical records available.</p>
-                ) : (
-                    <div className="history-list">
-                        {medicalHistory.map((visit, index) => (
-                            <div key={visit.id} className="history-card">
-                                <div className="card-header">
-                                    <h3>{visit.diagnosis}</h3>
-                                    <span className={`status-badge ${visit.progress}`}>
-                                        {visit.progress}
+    /* ── Tab: Medical History ── */
+    const renderMedicalHistory = () => (
+        <div className="pd-section">
+            <h2 className="pd-section__title">Complete Medical History</h2>
+            {medicalHistory.length === 0 ? (
+                <p className="pd-empty">No medical records available.</p>
+            ) : (
+                <div className="pd-history-list">
+                    {medicalHistory.map((visit) => (
+                        <div key={visit.id} className={`pd-history-card ${visit.tampered ? 'pd-history-card--tampered' : ''}`}>
+                             <div className="pd-history-card__header">
+                                 <div>
+                                     <span className="pd-history-card__diagnosis">
+                                         {visit.diagnosis}
+                                         {visit.tampered && <span className="pd-tamper-warn"> ⚠️ DATA TAMPERED!</span>}
+                                     </span>
+                                    <span className="pd-history-card__date">
+                                        {new Date(visit.visit_date).toLocaleDateString()}
                                     </span>
                                 </div>
-                                <div className="card-body">
-                                    <p><strong>Visit Date:</strong> {new Date(visit.visit_date).toLocaleDateString()}</p>
-                                    <p><strong>Doctor:</strong> {visit.doctor_name}</p>
-                                    <p><strong>Treatment:</strong> {visit.treatment}</p>
-                                    {visit.prescription && (
-                                        <p><strong>Prescription:</strong> {visit.prescription}</p>
-                                    )}
-                                    {visit.report && (
-                                        <p><strong>Report:</strong> {visit.report}</p>
-                                    )}
-                                    {visit.notes && (
-                                        <p><strong>Notes:</strong> {visit.notes}</p>
-                                    )}
+                                <span className={`pd-progress-badge pd-progress-badge--${visit.progress}`}>
+                                    {visit.progress === 'completed' ? '✓ Completed' : '⟳ Ongoing'}
+                                </span>
+                            </div>
+                            <div className="pd-history-card__body">
+                                <div className="pd-history-card__row">
+                                    <span className="pd-history-card__key">Doctor</span>
+                                    <span className="pd-history-card__val">{visit.doctor_name}</span>
+                                </div>
+                                <div className="pd-history-card__row">
+                                    <span className="pd-history-card__key">Treatment</span>
+                                    <span className="pd-history-card__val">{visit.treatment}</span>
+                                </div>
+                                {visit.prescription && (
+                                    <div className="pd-history-card__row">
+                                        <span className="pd-history-card__key">Prescription</span>
+                                        <span className="pd-history-card__val">{visit.prescription}</span>
+                                    </div>
+                                )}
+                                {visit.report && (
+                                    <div className="pd-history-card__row">
+                                        <span className="pd-history-card__key">Report</span>
+                                        <span className="pd-history-card__val">{visit.report}</span>
+                                    </div>
+                                )}
+                                {visit.notes && (
+                                    <div className="pd-history-card__row">
+                                        <span className="pd-history-card__key">Notes</span>
+                                        <span className="pd-history-card__val pd-history-card__notes">{visit.notes}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+
+    /* ── Tab: Reports ── */
+    const renderReports = () => (
+        <div className="pd-section">
+            <h2 className="pd-section__title">Medical Reports</h2>
+            {reports.length === 0 ? (
+                <p className="pd-empty">No reports available.</p>
+            ) : (
+                <div className="pd-reports-grid">
+                    {reports.map((report) => (
+                        <div key={report.id} className="pd-report-card">
+                            <div className="pd-report-card__icon">📄</div>
+                            <div className="pd-report-card__diagnosis">{report.diagnosis}</div>
+                            <div className="pd-report-card__meta">
+                                <span>📅 {new Date(report.visit_date).toLocaleDateString()}</span>
+                                <span>👨‍⚕️ {report.doctor_name}</span>
+                            </div>
+                            <p className="pd-report-card__text">{report.report}</p>
+                            <button
+                                className="pd-report-card__btn"
+                                onClick={() => window.open(report.report, '_blank')}
+                            >
+                                View Report ↗
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+
+    /* ── Tab: Profile ── */
+    const renderProfile = () => (
+        <div className="pd-section">
+            <h2 className="pd-section__title">My Profile</h2>
+            {!editMode ? (
+                <div className="pd-profile-view">
+                    <div className="pd-profile-avatar">
+                        {user.username.slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="pd-profile-name">{user.username}</div>
+                    <div className="pd-profile-role">Patient</div>
+
+                    <div className="pd-profile-grid">
+                        {[
+                            { icon: '✉️', label: 'Email', val: profile?.email },
+                            { icon: '📞', label: 'Phone', val: profile?.phone },
+                            { icon: '🎂', label: 'Date of Birth', val: profile?.date_of_birth },
+                            { icon: '⚧', label: 'Gender', val: profile?.gender },
+                            { icon: '🩸', label: 'Blood Group', val: profile?.blood_group },
+                            { icon: '🚨', label: 'Emergency Contact', val: profile?.emergency_contact },
+                            { icon: '📍', label: 'Address', val: profile?.address },
+                        ].map(({ icon, label, val }) => (
+                            <div key={label} className="pd-profile-field">
+                                <span className="pd-profile-field__icon">{icon}</span>
+                                <div>
+                                    <div className="pd-profile-field__label">{label}</div>
+                                    <div className="pd-profile-field__val">{val || 'Not provided'}</div>
                                 </div>
                             </div>
                         ))}
                     </div>
-                )}
-            </div>
-        );
-    };
-
-    const renderReports = () => {
-        return (
-            <div className="reports-section">
-                <h2>Medical Reports</h2>
-                {reports.length === 0 ? (
-                    <p>No reports available.</p>
-                ) : (
-                    <div className="reports-grid">
-                        {reports.map((report) => (
-                            <div key={report.id} className="report-card">
-                                <h4>{report.diagnosis}</h4>
-                                <p><strong>Date:</strong> {new Date(report.visit_date).toLocaleDateString()}</p>
-                                <p><strong>Doctor:</strong> {report.doctor_name}</p>
-                                <p><strong>Report:</strong> {report.report}</p>
-                                <button 
-                                    className="download-btn"
-                                    onClick={() => window.open(report.report, '_blank')}
-                                >
-                                    View Report
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    const renderProfile = () => {
-        return (
-            <div className="profile-section">
-                <h2>My Profile</h2>
-                {!editMode ? (
-                    <div className="profile-view">
-                        <div className="profile-info">
-                            <h3>Personal Information</h3>
-                            <p><strong>Username:</strong> {user.username}</p>
-                            <p><strong>Email:</strong> {profile?.email || 'Not provided'}</p>
-                            <p><strong>Phone:</strong> {profile?.phone || 'Not provided'}</p>
-                            <p><strong>Date of Birth:</strong> {profile?.date_of_birth || 'Not provided'}</p>
-                            <p><strong>Gender:</strong> {profile?.gender || 'Not provided'}</p>
-                            <p><strong>Blood Group:</strong> {profile?.blood_group || 'Not provided'}</p>
-                            <p><strong>Emergency Contact:</strong> {profile?.emergency_contact || 'Not provided'}</p>
-                            <p><strong>Address:</strong> {profile?.address || 'Not provided'}</p>
+                    <button className="pd-edit-btn" onClick={() => setEditMode(true)}>
+                        ✏️ Edit Profile
+                    </button>
+                </div>
+            ) : (
+                <form onSubmit={saveProfile} className="pd-profile-form">
+                    <h3 className="pd-profile-form__title">Edit Profile Information</h3>
+                    <div className="pd-form-grid">
+                        <div className="pd-form-group">
+                            <label>Email</label>
+                            <input type="email" name="email" placeholder="Email address" value={profileData.email} onChange={handleProfileChange} />
                         </div>
-                        <button className="edit-btn" onClick={() => setEditMode(true)}>
-                            Edit Profile
-                        </button>
-                    </div>
-                ) : (
-                    <form onSubmit={saveProfile} className="profile-form">
-                        <h3>Edit Profile Information</h3>
-                        <input
-                            type="email"
-                            name="email"
-                            placeholder="Email"
-                            value={profileData.email}
-                            onChange={handleProfileChange}
-                        />
-                        <input
-                            type="tel"
-                            name="phone"
-                            placeholder="Phone Number"
-                            value={profileData.phone}
-                            onChange={handleProfileChange}
-                        />
-                        <input
-                            type="date"
-                            name="date_of_birth"
-                            placeholder="Date of Birth"
-                            value={profileData.date_of_birth}
-                            onChange={handleProfileChange}
-                        />
-                        <select
-                            name="gender"
-                            value={profileData.gender}
-                            onChange={handleProfileChange}
-                        >
-                            <option value="male">Male</option>
-                            <option value="female">Female</option>
-                            <option value="other">Other</option>
-                        </select>
-                        <input
-                            type="text"
-                            name="blood_group"
-                            placeholder="Blood Group"
-                            value={profileData.blood_group}
-                            onChange={handleProfileChange}
-                        />
-                        <input
-                            type="tel"
-                            name="emergency_contact"
-                            placeholder="Emergency Contact"
-                            value={profileData.emergency_contact}
-                            onChange={handleProfileChange}
-                        />
-                        <textarea
-                            name="address"
-                            placeholder="Address"
-                            value={profileData.address}
-                            onChange={handleProfileChange}
-                            rows="3"
-                        />
-                        <div className="form-actions">
-                            <button type="submit" className="save-btn">Save Changes</button>
-                            <button type="button" className="cancel-btn" onClick={() => setEditMode(false)}>
-                                Cancel
-                            </button>
+                        <div className="pd-form-group">
+                            <label>Phone</label>
+                            <input type="tel" name="phone" placeholder="Phone number" value={profileData.phone} onChange={handleProfileChange} />
                         </div>
-                    </form>
-                )}
-            </div>
-        );
-    };
+                        <div className="pd-form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" name="date_of_birth" value={profileData.date_of_birth} onChange={handleProfileChange} />
+                        </div>
+                        <div className="pd-form-group">
+                            <label>Gender</label>
+                            <select name="gender" value={profileData.gender} onChange={handleProfileChange}>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div className="pd-form-group">
+                            <label>Blood Group</label>
+                            <input type="text" name="blood_group" placeholder="e.g. A+" value={profileData.blood_group} onChange={handleProfileChange} />
+                        </div>
+                        <div className="pd-form-group">
+                            <label>Emergency Contact</label>
+                            <input type="tel" name="emergency_contact" placeholder="Emergency contact number" value={profileData.emergency_contact} onChange={handleProfileChange} />
+                        </div>
+                    </div>
+                    <div className="pd-form-group pd-form-group--full">
+                        <label>Address</label>
+                        <textarea name="address" placeholder="Full address" value={profileData.address} onChange={handleProfileChange} rows="3" />
+                    </div>
+                    <div className="pd-form-actions">
+                        <button type="submit" className="pd-save-btn">💾 Save Changes</button>
+                        <button type="button" className="pd-cancel-btn" onClick={() => setEditMode(false)}>Cancel</button>
+                    </div>
+                </form>
+            )}
+        </div>
+    );
 
     if (loading) {
-        return <div className="loading">Loading patient data...</div>;
+        return (
+            <div className="pd-loading-screen">
+                <div className="pd-loading-spinner"></div>
+                <p>Loading your health data…</p>
+            </div>
+        );
     }
 
-    return (
-        <div className="patient-portal">
-            <header className="patient-header">
-                <h1>Welcome, {user.username}</h1>
-                <button onClick={onLogout} className="logout-btn">Logout</button>
-            </header>
+    const initials = user.username ? user.username.slice(0, 2).toUpperCase() : 'PT';
 
-            <nav className="patient-nav">
-                <button 
-                    className={activeTab === 'dashboard' ? 'active' : ''}
-                    onClick={() => setActiveTab('dashboard')}
-                >
-                    Dashboard
-                </button>
-                <button 
-                    className={activeTab === 'appointments' ? 'active' : ''}
-                    onClick={() => setActiveTab('appointments')}
-                >
-                    Appointments 📅
-                </button>
-                <button 
-                    className={activeTab === 'history' ? 'active' : ''}
-                    onClick={() => setActiveTab('history')}
-                >
-                    Medical History
-                </button>
-                <button 
-                    className={activeTab === 'reports' ? 'active' : ''}
-                    onClick={() => setActiveTab('reports')}
-                >
-                    Reports
-                </button>
-                <button 
-                    className={activeTab === 'profile' ? 'active' : ''}
-                    onClick={() => setActiveTab('profile')}
-                >
-                    Profile
-                </button>
+    const tabs = [
+        { id: 'dashboard',    label: '🏠 Overview' },
+        { id: 'appointments', label: '📅 Appointments' },
+        { id: 'history',      label: '🗂 History' },
+        { id: 'reports',      label: '📄 Reports' },
+        { id: 'profile',      label: '👤 Profile' },
+    ];
+
+    return (
+        <div className="pd-portal">
+            {/* ── Top Navigation Bar ── */}
+            <nav className="pd-topbar">
+                <div className="pd-topbar__brand">
+                    <div className="pd-topbar__logo-icon">🏥</div>
+                    <span className="pd-topbar__logo-text">
+                        SUPMS<span className="pd-topbar__logo-dot">.</span>
+                    </span>
+                </div>
+                <div className="pd-topbar__actions">
+                    <div className="pd-topbar__user">
+                        <div className="pd-topbar__avatar">{initials}</div>
+                        {user.username}
+                    </div>
+                    <button onClick={onLogout} className="pd-topbar__logout">Sign Out</button>
+                </div>
             </nav>
 
-            <main className="patient-content">
-                {activeTab === 'dashboard' && renderDashboard()}
+            {/* ── Tab Navigation ── */}
+            <div className="pd-tab-bar">
+                <div className="pd-tab-bar__inner">
+                    {tabs.map(tab => (
+                        <button
+                            key={tab.id}
+                            className={`pd-tab ${activeTab === tab.id ? 'pd-tab--active' : ''}`}
+                            onClick={() => setActiveTab(tab.id)}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Content ── */}
+            <main className="pd-main">
+                {activeTab === 'dashboard'    && renderDashboard()}
                 {activeTab === 'appointments' && <AppointmentBooking user={user} />}
-                {activeTab === 'history' && renderMedicalHistory()}
-                {activeTab === 'reports' && renderReports()}
-                {activeTab === 'profile' && renderProfile()}
+                {activeTab === 'history'      && renderMedicalHistory()}
+                {activeTab === 'reports'      && renderReports()}
+                {activeTab === 'profile'      && renderProfile()}
             </main>
         </div>
     );

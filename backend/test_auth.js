@@ -48,7 +48,7 @@ server.stderr.on('data', (d) => console.error('[SERVER ERR]:', d.toString()));
 async function runTests() {
     console.log('\n--- STARTING TESTS ---');
     try {
-        const db = await mysql.createConnection({ host: 'localhost', user: 'root', password: '[password]', database: 'hospital' });
+        const db = await mysql.createConnection({ host: 'localhost', user: 'root', password: 'clearnda2025#@', database: 'hospital' });
         const username = 'testuser_' + Date.now();
         const password = 'testpassword';
 
